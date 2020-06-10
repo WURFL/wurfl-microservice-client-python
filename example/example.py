@@ -1,27 +1,3 @@
-# wurfl-microservice-client-python
-Python WURFL Microservice Client
-
-WURFL Microservice (by ScientiaMobile, Inc.) is a mobile device detection service that can quickly and accurately detect over 500 capabilities of visiting devices. It can differentiate between portable mobile devices, desktop devices, SmartTVs and any other types of devices that have a web browser.
-
-This is the Python Client API for accessing the WURFL Microservice. The API is released under Open-Source and can be integrated with other open-source or proprietary code. In order to operate, it requires access to a running instance of the WURFL Microservice product, such as:
-
-- WURFL Microservice for Docker: https://www.scientiamobile.com/products/wurfl-microservice-docker-detect-device/
-
-- WURFL Microservice for AWS: https://www.scientiamobile.com/products/wurfl-device-detection-microservice-aws/
-
-- WURFL Microservice for Azure: https://www.scientiamobile.com/products/wurfl-device-detection-microservice-azure/ 
-
-Python implementation of the WM Client api.
-Requires:
-- Python 3.x
-- pip
-- pycurl module (you can install it with `pip install pycurl`)
-- requests module (you can install it with `pip install requests` - **only used for test**)
-
-The Example project contains an example of client api usage for a script :
-
-
-```python
 from wmclient import WmClient
 from model import WmClientError
 
@@ -97,5 +73,3 @@ try:
 except WmClientError as wme:
     # problems such as network errors  or internal server problems
     print("An error has occurred: " + wme.message)
-
-```
