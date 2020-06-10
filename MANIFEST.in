@@ -1,0 +1,8 @@
+include README
+include setup.cfg
+include setup.py
+include wurfl-microservice-client-python/__init__.py
+include wurfl-microservice-client-python/constants.py
+include wurfl-microservice-client-python/model.py
+include wurfl-microservice-client-python/wmclient.py
+global-exclude *test_*.py

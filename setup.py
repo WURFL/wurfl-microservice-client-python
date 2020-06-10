@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='wurfl-microservice-client-python',
-    packages=['wurfl-microservice-client-python'],  # The same as "name"
+    packages=['wurfl-microservice-client-python'],
     version='2.0.0',  # We start with 2.0.0 because it works with new server 2.x.y versions and to be aligned with the
     # other 2.x.y clients
     license='apache-2.0',
@@ -13,7 +13,8 @@ setup(
     author='Scientiamobile Inc.',
     author_email='support@scientiamobile.com',
     url='https://github.com/WURFL/wurfl-microservice-client-python',
-    download_url='https://github.com/WURFL/wurfl-microservice-client-python/dist/wm-client-python-2.0.0.tar.gz',
+    download_url='https://github.com/WURFL/wurfl-microservice-client-python/dist/wurfl-microservice-client-python-2.0'
+                 '.0.tar.gz',
     keywords=['device', 'mobile', 'device detection', 'analytics'],
     install_requires=[
         'pycurl',
@@ -28,5 +29,4 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
     ],
-
 )
