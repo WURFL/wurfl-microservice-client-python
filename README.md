@@ -17,7 +17,7 @@ Requires:
 - Python 3.x
 - pip
 - pycurl module (you can install it with `pip install pycurl`)
-- requests module (you can install it with `pip install requests` - **only used for test**)
+- requests module (you can install it with `pip install requests`)
 
 The Example project contains an example of client api usage for a script :
 
