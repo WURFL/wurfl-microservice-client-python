@@ -95,5 +95,4 @@ try:
 except WmClientError as wme:
     # problems such as network errors  or internal server problems
     print("An error has occurred: " + wme.message)
-
 ```
