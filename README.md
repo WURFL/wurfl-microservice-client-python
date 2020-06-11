@@ -10,7 +10,7 @@ This is the Python Client API for accessing the WURFL Microservice. The API is r
 
 - WURFL Microservice for AWS: https://www.scientiamobile.com/products/wurfl-device-detection-microservice-aws/
 
-- WURFL Microservice for Azure: https://www.scientiamobile.com/products/wurfl-device-detection-microservice-azure/ 
+- WURFL Microservice for Azure: https://www.scientiamobile.com/products/wurfl-device-detection-microservice-azure/
 
 Python implementation of the WM Client api.
 Requires:
