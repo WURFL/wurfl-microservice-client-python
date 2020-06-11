@@ -1,0 +1,10 @@
+2.0.0
+-------------------------------
+- First version of the Python client:
+    - lookup_useragent
+    - lookup_request (uses requests library Request object)
+    - lookup_device_id
+    - enumerator methods (all device OSes, all device makers, all version for OS, all models for brand)
+    - get_info method
+    - set_requested_capabilites filter methods
+    - has_capability method
