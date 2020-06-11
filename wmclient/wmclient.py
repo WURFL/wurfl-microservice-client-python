@@ -7,10 +7,7 @@ from io import BytesIO
 import logging
 import pycurl
 
-from constants import DEVICE_ID_CACHE_TYPE, HEADERS_CACHE_TYPE
-from model import JsonInfoData, WmClientError, JsonDeviceData, Request
-
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 __client_version__ = "wurfl-microservice-python_%s" % __version__
 __default_http_timeout__ = 10000
 config_path = ""
@@ -324,7 +321,7 @@ class WmClient:
             self.deviceOsVersionsMap = ddict
             self.device_os_lock.release()
         except Exception as e:
-            msg = format_except_message(e, "An error occurred getting device os name and version data - {}"
+            msg = self.__format_except_message__(e, "An error occurred getting device os name and version data - {}"
                                         .format(str(e)))
             logging.error(msg)
             data.close()
@@ -427,3 +424,79 @@ class WmClient:
             return fmsg
         else:
             return msg
+
+
+class WmClientError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+HEADERS_CACHE_TYPE = "head-cache"
+DEVICE_ID_CACHE_TYPE = "dId-cache"
+
+
+class JsonInfoData:
+
+    def __init__(self, info_dict):
+        self.wurfl_api_version = info_dict["wurfl_api_version"]
+        self.wurfl_info = info_dict["wurfl_info"]
+        self.wm_version = info_dict["wm_version"]
+        self.important_headers = info_dict["important_headers"]
+        self.static_capabilities = info_dict["static_caps"]
+        self.virtual_capabilities = info_dict["virtual_caps"]
+
+
+class JsonDeviceData:
+
+    def __init__(self, info_dict):
+        self.error = info_dict["error"]
+        self.api_version = info_dict["apiVersion"]
+        self.capabilities = info_dict["capabilities"]
+        self.mtime = int(info_dict["mtime"])
+        self.ltime = info_dict["ltime"]
+
+
+class Request:
+    def __init__(self, lookup_headers, requestedCaps, requestedVcaps, wurflId, cache_type, important_headers):
+        self.lookup_headers = lookup_headers
+        self.requested_caps = requestedCaps
+        self.requested_vcaps = requestedVcaps
+        self.wurfl_id = wurflId
+        self.cache_type = cache_type
+        self.important_headers = important_headers
+        self.key = None
+
+    def __eq__(self, other):
+        if self is None or other is None:
+            return False
+        if self.cache_type == DEVICE_ID_CACHE_TYPE:
+            return self.wurfl_id == other.wurfl_id
+        else:
+            return self.get_user_agent_cache_key() == other.get_user_agent_cache_key()
+
+    def __hash__(self):
+        return hash(self.get_user_agent_cache_key())
+
+    def get_user_agent_cache_key(self):
+
+        if self.key is not None:
+            return self.key
+
+        key = ""
+        if (self.lookup_headers is None or len(self.lookup_headers) == 0) \
+                & (HEADERS_CACHE_TYPE == self.cache_type):
+            self.key = ""
+            return key
+
+        # if cache type is device id we use wurfl_id as cache key
+        if DEVICE_ID_CACHE_TYPE == self.cache_type:
+            self.key = self.wurfl_id
+            return self.key
+
+        # Using important headers array preserves header name order
+        for h in self.important_headers:
+            if h in self.lookup_headers:
+                hval = self.lookup_headers[h]
+                if hval is not None:
+                    key += hval
+        self.key = key
+        return self.key

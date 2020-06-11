@@ -1,5 +1,4 @@
-from wmclient import WmClient
-from model import WmClientError
+from wmclient import *
 
 try:
     client = WmClient.create("http", "localhost", 8080, "")

@@ -1,12 +1,12 @@
 import threading
 import unittest
 
-from requests import Request
+from requests import Request as HttpRequest
 
-from model import WmClientError
+
 from test_data import createTestUserAgentList
 
-from wmclient import WmClient
+from wmclient import *
 from os import environ
 
 
@@ -182,7 +182,7 @@ class WmClientTest(unittest.TestCase):
                                "like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341",
             "Accept-Encoding": "application/json"
         }
-        req = Request('GET', "http://mywebsite.com", headers=pheaders)
+        req = HttpRequest('GET', "http://mywebsite.com", headers=pheaders)
 
         device = client.lookup_request(req)
         self.assertIsNotNone(device)
@@ -209,7 +209,7 @@ class WmClientTest(unittest.TestCase):
                                "like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341",
             "Accept-Encoding": "application/json"
         }
-        req = Request('GET', "http://mywebsite.com", headers=pheaders)
+        req = HttpRequest('GET', "http://mywebsite.com", headers=pheaders)
 
         device = client.lookup_request(req)
         self.assertIsNotNone(device)
@@ -230,7 +230,7 @@ class WmClientTest(unittest.TestCase):
         client = createTestClient()
         reqCaps = {"brand_name", "model_name"}
         client.set_requested_capabilities(reqCaps)
-        req = Request('GET', "http://mywebsite.com", headers={})
+        req = HttpRequest('GET', "http://mywebsite.com", headers={})
         device = client.lookup_request(req)
         self.assertEqual(device.capabilities.get("wurfl_id"), "generic")
         self.assertEqual(3, len(device.capabilities))
