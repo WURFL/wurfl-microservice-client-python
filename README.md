@@ -23,7 +23,6 @@ The Example project contains an example of client api usage for a script :
 
 ```python
 from wmclient import WmClient
-from model import WmClientError
 
 try:
     client = WmClient.create("http", "localhost", 8080, "")
