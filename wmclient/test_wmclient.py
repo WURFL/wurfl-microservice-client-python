@@ -3,7 +3,6 @@ import unittest
 
 from requests import Request as HttpRequest
 
-
 from test_data import createTestUserAgentList
 
 from wmclient import *
@@ -333,6 +332,64 @@ class WmClientTest(unittest.TestCase):
             errmsg = str(e)
         self.assertTrue(exc)
         self.assertTrue("device is missing" in errmsg)
+        client.destroy()
+
+    def test_lookup_headers_OK(self):
+        h_client = createTestClient()
+        pheaders = {
+            "User-Agent": "Mozilla/5.0 (Nintendo Switch; WebApplet) AppleWebKit/601.6 (KHTML, like Gecko) "
+                          "NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341",
+            "X-UCBrowser-Device-UA": "Mozilla/5.0 (Nintendo Switch; ShareApplet) AppleWebKit/601.6 (KHTML, "
+                                     "like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341",
+            "Device-Stock-UA": "Mozilla/5.0 (Nintendo Switch; WifiWebAuthApplet) AppleWebKit/601.6 (KHTML, "
+                               "like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341",
+            "Accept-Encoding": "application/json"
+        }
+
+        device = h_client.lookup_headers(pheaders)
+        self.assertIsNotNone(device)
+        capabilities = device.capabilities
+        self.assertIsNotNone(capabilities)
+        self.assertTrue(len(capabilities) >= 13)
+        self.assertEqual("Nintendo Switch", capabilities["complete_device_name"])
+        self.assertEqual("true", capabilities["is_touchscreen"])
+        self.assertEqual("nintendo_switch_ver1", capabilities["wurfl_id"])
+        self.assertEqual("Smart-TV", capabilities["form_factor"])
+
+        info = h_client.cache_info()
+        self.assertEqual(0, info.hits)
+        self.assertEqual(1, info.misses)
+
+        # now, let's pass the same header values with mixed key case
+        pheaders = {
+            "User-AgEnT": "Mozilla/5.0 (Nintendo Switch; WebApplet) AppleWebKit/601.6 (KHTML, like Gecko) "
+                          "NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341",
+            "X-UCBrowsEr-DeVice-UA": "Mozilla/5.0 (Nintendo Switch; ShareApplet) AppleWebKit/601.6 (KHTML, "
+                                     "like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341",
+            "Device-StocK-Ua": "Mozilla/5.0 (Nintendo Switch; WifiWebAuthApplet) AppleWebKit/601.6 (KHTML, "
+                               "like Gecko) NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341",
+            "Accept-EncoDing": "application/json"
+        }
+
+        device2 = h_client.lookup_headers(pheaders)
+        capabilities = device2.capabilities
+        self.assertIsNotNone(capabilities)
+        self.assertEqual("nintendo_switch_ver1", capabilities["wurfl_id"])
+        # now, despite the mixed case on header keys, we we should have a cache hit because headers
+        # have been "normalized" to standard header names
+        c_info = h_client.cache_info()
+        self.assertEqual(1, c_info.hits)
+        self.assertEqual(1, info.misses)
+
+        h_client.destroy()
+
+    def test_lookup_headers_with_headers_none(self):
+        client = createTestClient()
+
+        try:
+            client.lookup_headers(None)
+        except WmClientError as e:
+            self.assertTrue("headers dictionary cannot be None" in e.message)
         client.destroy()
 
     def test_getAllOsesTest(self):

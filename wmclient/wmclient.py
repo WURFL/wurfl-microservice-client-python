@@ -7,7 +7,7 @@ from io import BytesIO
 import logging
 import pycurl
 
-__version__ = "2.0.1"
+__version__ = "2.1.0"
 __client_version__ = "wurfl-microservice-python_%s" % __version__
 __default_http_timeout__ = 10000
 config_path = ""
@@ -37,6 +37,13 @@ class JSONModelMktName:
     def __init__(self, info_dict):
         self.brand_name = info_dict["brand_name"]
         self.model_name = info_dict["model_name"]
+
+
+def to_lower_keys_dict(headers):
+    lc_dict = dict()
+    for key in headers:
+        lc_dict[key.lower()] = headers[key]
+    return lc_dict
 
 
 class WmClient:
@@ -94,6 +101,8 @@ class WmClient:
     def destroy(self):
         """Closes and deallocates all resources used to connect to server.
         Function calls made after this one will cause error"""
+        self.clear_cache()
+
         self.curl_get.close()
         self.curl_get = None
 
@@ -251,7 +260,7 @@ class WmClient:
 
     def lookup_request(self, req):
 
-        """performs a device detection from the headers carried by the give HTTP request.
+        """performs a device detection from the headers carried by the given HTTP request.
         The request object is assumed to be the one used in requests python framework.
         If the User-Agent header is None or empty a generic device
                 is returned """
@@ -262,6 +271,30 @@ class WmClient:
         for hname in self.important_headers:
             if hname in req.headers:
                 hval = req.headers[hname]
+                if len(hval) > 0:
+                    reqHeaders[hname] = hval
+
+        request = Request(lookup_headers=reqHeaders, requestedCaps=self.requested_static_caps,
+                          requestedVcaps=self.requested_virtual_caps, wurflId=None,
+                          important_headers=self.important_headers, cache_type=HEADERS_CACHE_TYPE)
+        return self.__internal_request("/v2/lookuprequest/json", request)
+
+    def lookup_headers(self, headers):
+
+        """performs a device detection from the given headers map.
+        The request object is assumed to be the one used in requests python framework.
+        If the User-Agent header is None or empty a generic device
+                is returned """
+        if headers is None:
+            raise WmClientError("headers dictionary cannot be None")
+
+        lowerCaseHeaders = to_lower_keys_dict(headers)
+
+        reqHeaders = dict()
+        for hname in self.important_headers:
+            lower_name = hname.lower()
+            if lower_name in lowerCaseHeaders:
+                hval = lowerCaseHeaders[lower_name]
                 if len(hval) > 0:
                     reqHeaders[hname] = hval
 
@@ -322,7 +355,7 @@ class WmClient:
             self.device_os_lock.release()
         except Exception as e:
             msg = self.__format_except_message__(e, "An error occurred getting device os name and version data - {}"
-                                        .format(str(e)))
+                                                 .format(str(e)))
             logging.error(msg)
             data.close()
             raise WmClientError(msg)
@@ -429,6 +462,7 @@ class WmClient:
 class WmClientError(Exception):
     def __init__(self, message):
         self.message = message
+
 
 HEADERS_CACHE_TYPE = "head-cache"
 DEVICE_ID_CACHE_TYPE = "dId-cache"
