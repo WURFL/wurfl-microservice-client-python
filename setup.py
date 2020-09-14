@@ -6,8 +6,7 @@ with open('README') as f:
 setuptools.setup(
     name='wmclient',
     packages=['wmclient'],
-    version='2.0.0',  # We start with 2.0.0 because it works with new server 2.x.y versions and to be aligned
-    # with the other 2.x.y clients
+    version='2.1.0',
     license='apache-2.0',
     description='WURFL Microservice client for Python',
     long_description=long_description,
