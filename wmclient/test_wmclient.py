@@ -1,4 +1,3 @@
-import threading
 import unittest
 
 from requests import Request as HttpRequest
@@ -336,6 +335,7 @@ class WmClientTest(unittest.TestCase):
 
     def test_lookup_headers_OK(self):
         h_client = createTestClient()
+        h_client.set_cache_size(10000)
         pheaders = {
             "User-Agent": "Mozilla/5.0 (Nintendo Switch; WebApplet) AppleWebKit/601.6 (KHTML, like Gecko) "
                           "NF/4.0.0.5.9 NintendoBrowser/5.1.0.13341",
@@ -356,9 +356,8 @@ class WmClientTest(unittest.TestCase):
         self.assertEqual("nintendo_switch_ver1", capabilities["wurfl_id"])
         self.assertEqual("Smart-TV", capabilities["form_factor"])
 
-        info = h_client.cache_info()
-        self.assertEqual(0, info.hits)
-        self.assertEqual(1, info.misses)
+        cs = h_client.get_actual_cache_size()
+        self.assertEqual(1, cs[1])
 
         # now, let's pass the same header values with mixed key case
         pheaders = {
@@ -377,9 +376,9 @@ class WmClientTest(unittest.TestCase):
         self.assertEqual("nintendo_switch_ver1", capabilities["wurfl_id"])
         # now, despite the mixed case on header keys, we we should have a cache hit because headers
         # have been "normalized" to standard header names
-        c_info = h_client.cache_info()
-        self.assertEqual(1, c_info.hits)
-        self.assertEqual(1, info.misses)
+        c_info = h_client.get_actual_cache_size()
+        self.assertEqual(0, cs[0])
+        self.assertEqual(1, cs[1])
 
         h_client.destroy()
 
@@ -475,109 +474,110 @@ class WmClientTest(unittest.TestCase):
     def test_lru_cache_on_lookup_useragent(self):
         ua = "ZTE-Z331/1.5.0 NetFront/3.5 QTV5.1 Profile/MIDP-2.1 Configuration/CLDC-1.1"
         client = createTestClient()
-        client.clear_cache()
+        client.set_cache_size(1000)
+        client.clear_caches()
         client.lookup_useragent(ua)
-        info = client.cache_info()
-        self.assertEqual(1, info.misses)
-        self.assertEqual(0, info.hits)
+        cs = client.get_actual_cache_size()
+        self.assertEqual(1, cs[1])
+        self.assertEqual(0, cs[0])
         client.lookup_useragent(ua)
-        info = client.cache_info()
-        self.assertEqual(1, info.misses)
-        self.assertEqual(1, info.hits)
 
         for i in range(4):
             client.lookup_useragent(ua)
         client.lookup_useragent("fake-ua")
-        info = client.cache_info()
-        self.assertEqual(2, info.misses)
-        self.assertEqual(5, info.hits)
+        cs = client.get_actual_cache_size()
+        self.assertEqual(2, cs[1])
+        self.assertEqual(0, cs[0])
+
         client.destroy()
 
     def test_lru_cache_on_mixed_lookups(self):
         client = createTestClient()
-        client.clear_cache()
+        client.set_cache_size(1000)
+        client.clear_caches()
         ua = "ZTE-Z331/1.5.0 NetFront/3.5 QTV5.1 Profile/MIDP-2.1 Configuration/CLDC-1.1"
         client.lookup_useragent(ua)
         client.lookup_device_id("opwv_v6_generic")
-        info = client.cache_info()
         # two different lookups, only cache miss here
-        self.assertEqual(2, info.misses)
-        self.assertEqual(0, info.hits)
-        client.lookup_useragent(ua)
-        info = client.cache_info()
-        # Our first cache hit
-        self.assertEqual(2, info.misses)
-        self.assertEqual(1, info.hits)
+        cs = client.get_actual_cache_size()
+        self.assertEqual(1, cs[0])
+        self.assertEqual(1, cs[1])
+
         # 1 miss and multiple cache hit on device id
         for i in range(100):
             client.lookup_device_id("alcatel_generic_v5")
-        info = client.cache_info()
-        self.assertEqual(3, info.misses)
-        self.assertEqual(100, info.hits)
+        cs = client.get_actual_cache_size()
+        self.assertEqual(2, cs[0])
         for i in range(10):
             client.lookup_useragent("Mozilla/5.0 (iPhone; CPU iPhone OS 12_0 like Mac OS X) AppleWebKit/605.1.15 ("
                                     "KHTML, like Gecko) Version/12.0 Mobile/15E148 Safari/604.1")
-        info = client.cache_info()
-        self.assertEqual(4, info.misses)
-        self.assertEqual(109, info.hits)
+        cs = client.get_actual_cache_size()
+        self.assertEqual(2, cs[0])
+        self.assertEqual(2, cs[1])
 
         # subtle case: ua wurfl_id passed as a user-agent
         device = client.lookup_useragent("alcatel_generic_v5")
-        info = client.cache_info()
         # this detection causes a cache miss because cache for WURFL ID and
         # http headers in general (user-agent included) are computed differently
-        self.assertEqual(5, info.misses)
-        self.assertEqual(109, info.hits)
-        # another subtle case, ua passed as wurfl_id. Result is the same as the above case
-        # In this case we don't have any cache miss because the API function raises error before
+        cs = client.get_actual_cache_size()
+        self.assertEqual(2, cs[0])
+        self.assertEqual(3, cs[1])
+        # another subtle case, ua passed as wurfl_id.
+        # In this case we don't add any element to cache because the API function raises error before
         # cache miss can be computed (cache compute is done in the decorator, after method properly returns
         try:
             client.lookup_device_id(ua)
         except Exception:
             pass
-        info = client.cache_info()
-        self.assertEqual(5, info.misses)
-        self.assertEqual(109, info.hits)
+        cs = client.get_actual_cache_size()
+        self.assertEqual(2, cs[0])
 
     # This test needs the environment variable CACHE_SIZE to be set to 1000 before starting the test session
     def test_cache_size(self):
         client = createTestClient()
-        client.clear_cache()
+        client.set_cache_size(10000)
+        client.clear_caches()
         for i in range(1010):
             client.lookup_useragent("ua " + str(i))
-        info = client.cache_info()
-        self.assertEqual(1000, info.maxsize)
-        self.assertEqual(1010, info.misses)
+        cs = client.get_actual_cache_size()
+        self.assertEqual(1010, cs[1])
         client.destroy()
 
     def test_clear_lru_cache_on_set_requested_caps(self):
         client = createTestClient()
+        client.set_cache_size(1000)
         client.set_requested_static_capabilities("brand_name")
         device = client.lookup_useragent("opwv_v6_generic")
         self.assertIsNotNone(device)
-        info = client.cache_info()
-        self.assertEqual(1, info.misses)
+        cs = client.get_actual_cache_size()
+        self.assertEqual(1, cs[1])
         # changing the requested capabilities causes a cache clearing invocation, because device capabilities
         # need to be re saved in order to comply with the new requirement
         client.set_requested_static_capabilities(["brand_name", "model_name"])
-        info = client.cache_info()
-        self.assertEqual(0, info.misses)
+        cs = client.get_actual_cache_size()
+        self.assertEqual(0, cs[1])
 
         # same test but requesting virtual capabilities only
         client.lookup_useragent("opwv_v6_generic")
-        info = client.cache_info()
-        self.assertEqual(1, info.misses)
+        cs = client.get_actual_cache_size()
+        self.assertEqual(0, cs[0])
+        self.assertEqual(1, cs[1])
         client.set_requested_virtual_capabilities("form_factor")
-        info = client.cache_info()
-        self.assertEqual(0, info.misses)
+        # again, it is reset
+        cs = client.get_actual_cache_size()
+        self.assertEqual(0, cs[0])
+        self.assertEqual(0, cs[1])
 
-        # same test again but requesting bith static and virtual capabilities
+        # same test again but requesting both static and virtual capabilities
         client.lookup_useragent("opwv_v6_generic")
-        info = client.cache_info()
-        self.assertEqual(1, info.misses)
+        cs = client.get_actual_cache_size()
+        self.assertEqual(0, cs[0])
+        self.assertEqual(1, cs[1])
+
         client.set_requested_capabilities(["brand_name", "form_factor"])
-        info = client.cache_info()
-        self.assertEqual(0, info.misses)
+        cs = client.get_actual_cache_size()
+        self.assertEqual(0, cs[0])
+        self.assertEqual(0, cs[1])
         client.destroy()
 
     def test_subsequent_post_get_calls(self):

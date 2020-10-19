@@ -1,7 +1,7 @@
 import json
 import os
 import threading
-from functools import lru_cache
+import pylru
 from io import BytesIO
 
 import logging
@@ -9,7 +9,7 @@ import pycurl
 
 __version__ = "2.1.0"
 __client_version__ = "wurfl-microservice-python_%s" % __version__
-__default_http_timeout__ = 10000
+__default_http_timeout__ = 20000
 config_path = ""
 
 
@@ -49,6 +49,7 @@ def to_lower_keys_dict(headers):
 class WmClient:
 
     def __init__(self):
+        self.ltime = None
         self.scheme = "http"
         self.host = ""
         self.port = 80
@@ -60,6 +61,11 @@ class WmClient:
         self.device_os_lock = threading.Lock()
         self.device_makes_lock = threading.Lock()
         self.device_OSes = []
+        self.ua_cache_lock = threading.Lock()
+        self.dev_cache_lock = threading.Lock()
+        self.make_models = []
+        self.device_makes = []
+
         self.curl_post = pycurl.Curl()
         self.curl_post.setopt(pycurl.TIMEOUT_MS, __default_http_timeout__)
         self.curl_post.setopt(pycurl.HTTPHEADER, ['Accept: application/json',
@@ -67,6 +73,12 @@ class WmClient:
         self.curl_get = pycurl.Curl()
         self.curl_get.setopt(pycurl.TIMEOUT_MS, __default_http_timeout__)
         self.curl_get.setopt(pycurl.HTTPHEADER, ['Accept: application/json'])
+
+        self.device_os_versions_dict = dict()
+
+        # caches: by default client has none. Yet it is strongly recommended to set them up.
+        self.dev_id_cache = None
+        self.ua_cache = None
 
     @staticmethod
     def create(scheme, host, port, baseURI):
@@ -83,6 +95,7 @@ class WmClient:
         client.important_headers = info.important_headers
         client.staticCaps = sorted(info.static_capabilities)
         client.virtualCaps = sorted(info.virtual_capabilities)
+        client.ltime = info.ltime
 
         return client
 
@@ -101,7 +114,7 @@ class WmClient:
     def destroy(self):
         """Closes and deallocates all resources used to connect to server.
         Function calls made after this one will cause error"""
-        self.clear_cache()
+        self.clear_caches()
 
         self.curl_get.close()
         self.curl_get = None
@@ -132,6 +145,7 @@ class WmClient:
         if 200 <= res_code < 400:
             info = json.loads(data.getvalue().decode(encoding='UTF-8'))
             data.close()
+            self.clear_cache_if_needed(info["ltime"])
             return JsonInfoData(info)
         else:
             msg = "get_info - Unable to get WURFL microservice server info - response code: " + str(res_code)
@@ -168,7 +182,7 @@ class WmClient:
                 stCaps.append(name)
 
         self.requested_static_caps = stCaps
-        self.clear_cache()
+        self.clear_caches()
 
     def set_requested_virtual_capabilities(self, capsList):
         """sets the list of virtual capabilities handled by this client"""
@@ -183,14 +197,14 @@ class WmClient:
                 vCaps.append(name)
 
         self.requested_virtual_caps = vCaps
-        self.clear_cache()
+        self.clear_caches()
 
     def set_requested_capabilities(self, capsList):
         """sets the list of virtual and static capabilities handled by this client"""
         if capsList is None:
             self.requested_static_caps = None
             self.requested_virtual_caps = None
-            self.__internal_request.cache_clear()
+            self.clear_caches()
             return
 
         capNames = []
@@ -208,12 +222,102 @@ class WmClient:
 
         if len(vcapNames) > 0:
             self.requested_virtual_caps = vcapNames
-        self.__internal_request.cache_clear()
+        self.clear_caches()
 
-    @lru_cache(maxsize=cache_size)
+    def set_cache_size(self, size):
+        """
+        Creates a new LRU cache with the given size or, if cache has already been created, increases the size to
+        given value.
+        :param size: new size of the cache
+        """
+        if self.dev_id_cache is None:
+            self.dev_id_cache = pylru.lrucache(10000)
+
+        if self.ua_cache is None:
+            self.ua_cache = pylru.lrucache(size)
+        else:
+            self.ua_cache.size(size)
+
+    def clear_caches(self):
+        if self.ua_cache is not None:
+            with self.ua_cache_lock:
+                self.ua_cache.clear()
+
+        if self.dev_id_cache is not None:
+            with self.dev_cache_lock:
+                self.dev_id_cache.clear()
+
+        self.make_models = []
+        self.device_makes = []
+
+        with self.device_os_lock:
+            self.device_OSes = []
+            self.device_os_versions_dict = dict()
+
+    def clear_cache_if_needed(self, ltime):
+        if ltime is not None and not (ltime == self.ltime):
+            self.ltime = ltime
+            self.clear_caches()
+
+    def get_actual_cache_size(self):
+
+        csize = [0] * 2
+
+        with self.dev_cache_lock:
+            if self.dev_id_cache is not None:
+                csize[0] = len(self.dev_id_cache)
+
+        with self.ua_cache_lock:
+            if self.ua_cache is not None:
+                csize[1] = len(self.ua_cache)
+
+        return csize
+
+    def safe_put_device(self, cache_type, key, device):
+        """
+        Puts the device in the cache corresponding to the key value if it has been initialized
+        :param cache_type: the type of cache to which save the element
+        :param key: the cache type
+        :param device: the device to store in cache
+        """
+
+        if cache_type == HEADERS_CACHE_TYPE:
+            if self.ua_cache is not None:
+                with self.ua_cache_lock:
+                    self.ua_cache[key] = device
+
+        elif cache_type == DEVICE_ID_CACHE_TYPE:
+            if self.dev_id_cache is not None:
+                with self.dev_cache_lock:
+                    self.dev_id_cache[key] = device
+
     def __internal_request(self, path, req):
 
+        if req is None:
+            raise WmClientError("Request object cannot be None")
+
+        cache_key = None
         device = None
+        if DEVICE_ID_CACHE_TYPE == req.cache_type:
+            cache_key = req.wurfl_id
+        elif HEADERS_CACHE_TYPE == req.cache_type:
+            cache_key = req.get_headers_cache_key()
+
+        # First, do a cache lookup
+        if req.cache_type is not None and len(req.cache_type) > 0 and cache_key is not None and len(cache_key) > 0:
+            if req.cache_type == DEVICE_ID_CACHE_TYPE and self.dev_id_cache is not None:
+                with self.dev_cache_lock:
+                    device = self.dev_id_cache.get(req.wurfl_id)
+                if device is not None:
+                    return device
+            elif req.cache_type == HEADERS_CACHE_TYPE and self.ua_cache is not None:
+                with self.ua_cache_lock:
+                    device = self.ua_cache.get(cache_key)
+
+        if device is not None:
+            return device
+
+        # No device found in cache, do a server lookup
         # Buffer where data sent from the server are written
         data = BytesIO()
         url = self.__create_URL(path)
@@ -236,6 +340,12 @@ class WmClient:
                 if device.error != "":
                     raise WmClientError("Unable to complete request to WM server: " + device.error)
 
+                # check if cache must be cleared
+                self.clear_cache_if_needed(device.ltime)
+                # add device to cache
+                if device is not None and len(cache_key) > 0:
+                    self.safe_put_device(req.cache_type, cache_key, device)
+
         except Exception as e:
             logging.error(str(e))
             if isinstance(e, WmClientError):
@@ -247,6 +357,7 @@ class WmClient:
         finally:
             # closing buffer
             data.close()
+
         return device
 
     def lookup_useragent(self, useragent):
@@ -351,7 +462,7 @@ class WmClient:
             if not self.device_os_lock.locked():
                 self.device_os_lock.acquire()
             self.device_OSes = devOses
-            self.deviceOsVersionsMap = ddict
+            self.device_os_versions_dict = ddict
             self.device_os_lock.release()
         except Exception as e:
             msg = self.__format_except_message__(e, "An error occurred getting device os name and version data - {}"
@@ -366,8 +477,8 @@ class WmClient:
     def get_all_versions_for_OS(self, osName):
         """:return a list of all the known versions for the given device OS"""
         self.__load_device_OSes_data()
-        if osName in self.deviceOsVersionsMap:
-            osVers = self.deviceOsVersionsMap[osName]
+        if osName in self.device_os_versions_dict:
+            osVers = self.device_os_versions_dict[osName]
             for ver in osVers:
                 if "" == ver:
                     osVers.remove(ver)
@@ -440,12 +551,10 @@ class WmClient:
             raise WmClientError(msg)
 
     def cache_info(self):
-        """:return the current state of WMClient internal cache (hits, misses, max size)"""
-        return self.__internal_request.cache_info()
-
-    def clear_cache(self):
-        """clears WM client internal cache"""
-        return self.__internal_request.cache_clear()
+        """
+        This method is deprecated since version 2.2.0 and will always return None. Use get_actual_cache_size instead
+        :return the current state of WMClient internal cache (hits, misses, max size)"""
+        return None
 
     def get_api_version(self):
         """:return the version of this WM Client"""
@@ -477,6 +586,7 @@ class JsonInfoData:
         self.important_headers = info_dict["important_headers"]
         self.static_capabilities = info_dict["static_caps"]
         self.virtual_capabilities = info_dict["virtual_caps"]
+        self.ltime = info_dict["ltime"]
 
 
 class JsonDeviceData:
@@ -510,7 +620,7 @@ class Request:
     def __hash__(self):
         return hash(self.get_user_agent_cache_key())
 
-    def get_user_agent_cache_key(self):
+    def get_headers_cache_key(self):
 
         if self.key is not None:
             return self.key
