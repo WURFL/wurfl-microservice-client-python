@@ -312,7 +312,6 @@ class WmClient:
                     self.safe_put_device(req.cache_type, cache_key, device)
 
         except Exception as e:
-            logging.error(str(e))
             if isinstance(e, WmClientError):
                 raise e
             else:
@@ -447,18 +446,18 @@ class WmClient:
             raise WmClientError(msg)
 
     def __load_device_makes_data(self):
-
-        # If deviceMakes cache has values everything has already been loaded, thus we exit
-        self.device_makes_lock.acquire()
-        if len(self.device_makes) > 0:
-            if self.device_makes_lock.locked():
-                self.device_makes_lock.release()
+        try:
+            # If deviceMakes cache has values everything has already been loaded, thus we exit
+            self.device_makes_lock.acquire()
+            if len(self.device_makes) > 0:
                 return
+        finally:
+            self.device_makes_lock.release()
 
-        # No values already loaded, let's do it.
+            # No values already loaded, let's do it.
         try:
             url = self.__create_URL("/v2/alldevices/json")
-            res = self.internal_client.request("GET", url, )
+            res = self.internal_client.request("GET", url)
             res_code = res.status
             if not (200 <= res_code < 400):
                 raise WmClientError("Unable to get device makers data - response code: " + str(res_code))
@@ -476,15 +475,11 @@ class WmClient:
                     mdMkNames = dmMap.get(mkModel.brand_name)
                     if mdMkNames is None:
                         mdMkNames = []
-                        dmMap[mkModel.brand_name] = mdMkNames
+                    dmMap[mkModel.brand_name] = mdMkNames
 
                     mdMkNames.append(mkModel)
-                    if not self.device_makes_lock.locked():
-                        self.device_makes_lock.acquire()
                     self.deviceMakesMap = dmMap
                     self.device_makes = devMakes
-                    if self.device_makes_lock.locked():
-                        self.device_makes_lock.release()
         except Exception as e:
             msg = self.__format_except_message__(e, "An error occurred getting makes and model data ")
             logging.error(msg)
