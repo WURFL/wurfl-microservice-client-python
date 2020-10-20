@@ -7,7 +7,7 @@ import urllib3
 
 __version__ = "2.1.0"
 __client_version__ = "wurfl-microservice-python_%s" % __version__
-__default_http_timeout__ = 20000
+__default_http_timeout__ = 10
 config_path = ""
 
 logger = logging.getLogger("wurfl-microservice")
@@ -82,7 +82,7 @@ class WmClient:
         return client
 
     def set_http_timeout(self, timeout):
-        """Sets HTTP connection timeout in milliseconds"""
+        """Sets HTTP connection timeout in seconds"""
         if timeout is None or timeout <= 0:
             self.internal_client = urllib3.PoolManager(num_pools=200, maxsize=200, timeout=timeout)
 
