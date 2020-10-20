@@ -1,26 +1,14 @@
 import json
-import os
 import threading
 import pylru
-from io import BytesIO
 
 import logging
-import pycurl
+import urllib3
 
 __version__ = "2.1.0"
 __client_version__ = "wurfl-microservice-python_%s" % __version__
 __default_http_timeout__ = 20000
 config_path = ""
-
-
-def read_cache_size():
-    default_cache_size = 200000
-    if "WM_CACHE_SIZE" in os.environ:
-        return int(os.environ["WM_CACHE_SIZE"])
-    return default_cache_size
-
-
-cache_size = read_cache_size()
 
 logger = logging.getLogger("wurfl-microservice")
 
@@ -67,8 +55,8 @@ class WmClient:
         self.dev_cache_lock = threading.Lock()
         self.make_models = []
         self.device_makes = []
-        self.timeout = __default_http_timeout__
         self.device_os_versions_dict = dict()
+        self.internal_client = urllib3.PoolManager(num_pools=200, maxsize=200, timeout=__default_http_timeout__)
 
         # caches: by default client has none. Yet it is strongly recommended to set them up.
         self.dev_id_cache = None
@@ -93,47 +81,27 @@ class WmClient:
 
         return client
 
-    def create_pycurl(self, url, write_func, payload):
-        pyc = pycurl.Curl()
-        if self.timeout is not None and self.timeout > 0:
-            pyc.setopt(pycurl.TIMEOUT_MS, self.timeout)
-        else:
-            pyc.setopt(pycurl.TIMEOUT_MS, __default_http_timeout__)
-
-        pyc.setopt(pycurl.HTTPHEADER, ['Accept: application/json', 'Content-Type: application/json'])
-        pyc.setopt(pycurl.URL, url)
-        pyc.setopt(pycurl.WRITEFUNCTION, write_func)
-        # Sets request method to POST,
-        # and data to send in request body.
-        if payload is not None:
-            pyc.setopt(pyc.POSTFIELDS, payload)
-        return pyc
-
     def set_http_timeout(self, timeout):
         """Sets HTTP connection timeout in milliseconds"""
         if timeout is None or timeout <= 0:
-            self.timeout = timeout
+            self.internal_client = urllib3.PoolManager(num_pools=200, maxsize=200, timeout=timeout)
 
     def destroy(self):
         """Closes and deallocates all resources used to connect to server.
         Function calls made after this one will cause error"""
         self.clear_caches()
-        self = None
+        self.internal_client = None
 
     def get_info(self):
         """Returns info about WURFL microservice server.
         It raises a WmClientError in case of connection errors/timeouts"""
 
-        curl_get = None
         msg = "Client creation failed. Unable to connect to WURFL microservice server - "
 
         try:
-            # performs a GET using pycurl
-            data = BytesIO()
-            curl_get = self.create_pycurl(self.__create_URL("/v2/getinfo/json"), data.write, None)
-
-            curl_get.perform()
-            res_code = curl_get.getinfo(pycurl.HTTP_CODE)
+            # performs a GET
+            res = self.internal_client.request("GET", self.__create_URL("/v2/getinfo/json"))
+            res_code = res.status
 
         except ConnectionError as e:
             if hasattr(e, 'message'):
@@ -141,14 +109,10 @@ class WmClient:
                 raise WmClientError(msg)
         except Exception:
             raise WmClientError(msg)
-        finally:
-            if curl_get is not None:
-                curl_get.close()
 
         if 200 <= res_code < 400:
-            info = json.loads(data.getvalue().decode(encoding='UTF-8'))
-            data.close()
-            curl_get.close()
+            info = json.loads(res.data.decode('utf-8'))
+            res.release_conn()
             self.clear_cache_if_needed(info["ltime"])
             return JsonInfoData(info)
         else:
@@ -322,22 +286,24 @@ class WmClient:
             return device
 
         # No device found in cache, do a server lookup
-        # Buffer where data sent from the server are written
-        data = BytesIO()
-        url = self.__create_URL(path)
-        curl_post = None
+
         try:
             # prepares request payload
-            d = json.dumps(req.__dict__)
-            payload = d.encode()
-            curl_post = self.create_pycurl(url, data.write, payload)
-            curl_post.perform()
-            res_code = curl_post.getinfo(pycurl.HTTP_CODE)
+            payload = json.dumps(req.__dict__).encode('utf-8')
+
+            res = self.internal_client.request(
+                'POST',
+                self.__create_URL(path),
+                body=payload,
+                headers={'Content-Type': 'application/json'})
+
+            res_code = res.status
+
             if 200 <= res_code < 400:
-                json_response = json.loads(data.getvalue().decode(encoding='UTF-8'))
+                json_response = json.loads(res.data.decode(encoding='UTF-8'))
                 device = JsonDeviceData(json_response)
-                data.close()
-                curl_post.close()
+                res.release_conn()
+
                 if device.error != "":
                     raise WmClientError("Unable to complete request to WM server: " + device.error)
 
@@ -355,11 +321,6 @@ class WmClient:
                 msg = self.__format_except_message__(e, "Unable to complete request to WM server: ")
                 logging.error(msg)
                 raise WmClientError(msg)
-        finally:
-            # closing buffer
-            data.close()
-            if curl_post is not None:
-                curl_post.close()
 
         return device
 
@@ -438,18 +399,16 @@ class WmClient:
             if self.device_os_lock.locked():
                 self.device_os_lock.release()
             return
-        data = BytesIO()
-        curl_get = None
+
         try:
             url = self.__create_URL("/v2/alldeviceosversions/json")
-            curl_get = self.create_pycurl(url, data.write, None)
-            curl_get.perform()
-            res_code = curl_get.getinfo(pycurl.HTTP_CODE)
+            res = self.internal_client.request("GET", url)
+            res_code = res.status
             if not (200 <= res_code < 400):
                 raise WmClientError("Unable to get device OSes data - response code: " + str(res_code))
             else:
-                strOSes = json.loads(data.getvalue().decode(encoding='UTF-8'))
-                data.close()
+                strOSes = json.loads(res.data.decode(encoding='UTF-8'))
+                res.release_conn()
             devOses = []
             ddict = dict()
             for osVer in strOSes:
@@ -471,13 +430,10 @@ class WmClient:
             msg = self.__format_except_message__(e, "An error occurred getting device os name and version data - {}"
                                                  .format(str(e)))
             logging.error(msg)
-            data.close()
             raise WmClientError(msg)
         finally:
             if self.device_os_lock.locked():
                 self.device_os_lock.release()
-            if curl_get is not None:
-                curl_get.close()
 
     def get_all_versions_for_OS(self, osName):
         """:return a list of all the known versions for the given device OS"""
@@ -502,18 +458,15 @@ class WmClient:
                 return
 
         # No values already loaded, let's do it.
-        data = BytesIO()
-        curl_get = None
         try:
             url = self.__create_URL("/v2/alldevices/json")
-            curl_get = self.create_pycurl(url, data.write, None)
-            curl_get.perform()
-            res_code = curl_get.getinfo(pycurl.HTTP_CODE)
+            res = self.internal_client.request("GET", url, )
+            res_code = res.status
             if not (200 <= res_code < 400):
                 raise WmClientError("Unable to get device makers data - response code: " + str(res_code))
             else:
-                localMakeModels = json.loads(data.getvalue().decode(encoding='UTF-8'))
-                data.close()
+                localMakeModels = json.loads(res.data.decode(encoding='UTF-8'))
+                res.release_conn()
 
                 dmMap = dict()
                 devMakes = []
@@ -538,9 +491,6 @@ class WmClient:
             msg = self.__format_except_message__(e, "An error occurred getting makes and model data ")
             logging.error(msg)
             raise WmClientError(msg)
-        finally:
-            if curl_get is not None:
-                curl_get.close()
 
     def get_all_device_makes(self):
         """:return a list of all device makers"""
