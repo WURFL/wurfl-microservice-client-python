@@ -99,26 +99,24 @@ class WmClient:
         msg = "Client creation failed. Unable to connect to WURFL microservice server - "
 
         try:
-            # performs a GET
+            # performs a GET and get status again
             res = self.internal_client.request("GET", self.__create_URL("/v2/getinfo/json"))
             res_code = res.status
 
-        except ConnectionError as e:
-            if hasattr(e, 'message'):
-                msg += e.message
+            if 200 <= res_code < 400:
+                info = json.loads(res.data.decode('utf-8'))
+                res.release_conn()
+                self.clear_cache_if_needed(info["ltime"])
+                return JsonInfoData(info)
+            else:
+                msg = "get_info - Unable to get WURFL microservice server info - response code: " + str(res_code)
+                logging.error(msg)
                 raise WmClientError(msg)
-        except Exception:
-            raise WmClientError(msg)
 
-        if 200 <= res_code < 400:
-            info = json.loads(res.data.decode('utf-8'))
-            res.release_conn()
-            self.clear_cache_if_needed(info["ltime"])
-            return JsonInfoData(info)
-        else:
-            msg = "get_info - Unable to get WURFL microservice server info - response code: " + str(res_code)
-            logging.error(msg)
-            raise WmClientError(msg)
+        except Exception as e:
+            err_msg_tpl = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = err_msg_tpl.format(type(e).__name__, e.args)
+            raise WmClientError(message)
 
     def __create_URL(self, path):
         url = self.scheme + "://" + self.host

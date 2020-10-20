@@ -300,7 +300,7 @@ class WmClientTest(unittest.TestCase):
             client.lookup_device_id("nokia_generic_series40_wrong")
         except WmClientError as e:
             exc = True
-            errmsg = str(e)
+            errmsg = str(e.message)
         self.assertTrue(exc)
         self.assertTrue("device is missing" in errmsg)
         client.destroy()
@@ -314,7 +314,7 @@ class WmClientTest(unittest.TestCase):
             client.lookup_device_id(None)
         except WmClientError as e:
             exc = True
-            errmsg = str(e)
+            errmsg = str(e.message)
         self.assertTrue(exc)
         self.assertTrue("device is missing" in errmsg)
         client.destroy()
@@ -328,7 +328,7 @@ class WmClientTest(unittest.TestCase):
             client.lookup_device_id("")
         except WmClientError as e:
             exc = True
-            errmsg = str(e)
+            errmsg = str(e.message)
         self.assertTrue(exc)
         self.assertTrue("device is missing" in errmsg)
         client.destroy()
