@@ -1,3 +1,4 @@
+import time
 import unittest
 
 from requests import Request as HttpRequest
@@ -604,3 +605,34 @@ class WmClientTest(unittest.TestCase):
             if "timed out" in str(e):
                 exc = True
         self.assertTrue(exc)
+
+    def test_cache_usage(self):
+        # this client has no active cache
+        client = createTestClient()
+        # perform detection on a dataset without using cache
+        uas = createTestUserAgentList()
+        start = time.time_ns()
+        for ua in uas:
+            client.lookup_useragent(ua)
+        tot_time_elapsed = time.time_ns() - start
+        avg_detection_time = tot_time_elapsed/len(uas)
+
+        # now let's add a cache layer and fill it
+        client.set_cache_size(10000)
+        for ua in uas:
+            client.lookup_useragent(ua)
+        assert(client.get_actual_cache_size()[1] > 0)
+
+        # measure cache usage times and compare it with no cache usage times
+        start = time.time_ns()
+        for ua in uas:
+            client.lookup_useragent(ua)
+        tot_cache_time = time.time_ns() - start
+        avg_cache_time = tot_cache_time/len(uas)
+
+        # cache MUST be at least an order of magnitude faster than detection
+        self.assertTrue(avg_detection_time > avg_cache_time * 10)
+        self.assertTrue(tot_time_elapsed > tot_cache_time * 10)
+
+        client.destroy()
+
