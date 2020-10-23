@@ -611,10 +611,10 @@ class WmClientTest(unittest.TestCase):
         client = createTestClient()
         # perform detection on a dataset without using cache
         uas = createTestUserAgentList()
-        start = time.time_ns()
+        start = time.time()
         for ua in uas:
             client.lookup_useragent(ua)
-        tot_time_elapsed = time.time_ns() - start
+        tot_time_elapsed = time.time() - start
         avg_detection_time = tot_time_elapsed/len(uas)
 
         # now let's add a cache layer and fill it
@@ -624,10 +624,10 @@ class WmClientTest(unittest.TestCase):
         assert(client.get_actual_cache_size()[1] > 0)
 
         # measure cache usage times and compare it with no cache usage times
-        start = time.time_ns()
+        start = time.time()
         for ua in uas:
             client.lookup_useragent(ua)
-        tot_cache_time = time.time_ns() - start
+        tot_cache_time = time.time() - start
         avg_cache_time = tot_cache_time/len(uas)
 
         ua = "ZTE-Z331/1.5.0 NetFront/3.5 QTV5.1 Profile/MIDP-2.1 Configuration/CLDC-1.1"
