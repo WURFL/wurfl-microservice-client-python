@@ -630,6 +630,13 @@ class WmClientTest(unittest.TestCase):
         tot_cache_time = time.time_ns() - start
         avg_cache_time = tot_cache_time/len(uas)
 
+        ua = "ZTE-Z331/1.5.0 NetFront/3.5 QTV5.1 Profile/MIDP-2.1 Configuration/CLDC-1.1"
+        device = client.lookup_useragent(ua)
+        self.assertIsNotNone(device)
+        self.assertIsNotNone(device.capabilities)
+        self.assertEqual("zte_z331_ver1_subuanetfront", device.capabilities["wurfl_id"])
+        self.assertEqual("ZTE Z331", device.capabilities["complete_device_name"])
+
         # cache MUST be at least an order of magnitude faster than detection
         self.assertTrue(avg_detection_time > avg_cache_time * 10)
         self.assertTrue(tot_time_elapsed > tot_cache_time * 10)
