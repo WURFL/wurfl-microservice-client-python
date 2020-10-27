@@ -17,7 +17,7 @@ try:
         "Accept": "*/*",
         "Accept-Encoding": "gzip, deflate",
         "Accept-Language": "en-US,en;q=0.9",
-        "Referer": "http://iporntv.net/",
+        "Referer": "http://itvv.net/",
         "User-Agent": "Mozilla/5.0 (Linux; U; Android 7.1.1; XT1635-02 Build/NPN26.107; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/85.0.4183.127 Mobile Safari/537.36 OPR/51.0.2254.150807",
         "X-Forwarded-For": "157.32.186.226",
         "X-Requested-With": "com.opera.mini.native"
