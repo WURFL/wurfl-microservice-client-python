@@ -111,3 +111,26 @@ except WmClientError as wme:
     # problems such as network errors  or internal server problems
     print("An error has occurred: " + wme.message)
 ```
+
+You can use a whole HTTP request to perform a detection:
+
+```python
+req_headers = {
+        "Accept": "*/*",
+        "Accept-Encoding": "gzip, deflate",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "http://mydinaub.net/",
+        "User-Agent": "Mozilla/5.0 (Linux; U; Android 7.1.1; XT1635-02 Build/NPN26.107; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/85.0.4183.127 Mobile Safari/537.36 OPR/51.0.2254.150807",
+        "X-Forwarded-For": "157.32.186.226",
+        "X-Requested-With": "com.opera.mini.native"
+    }
+    req = HttpRequest('GET', "http://mywebsite.com", headers=req_headers)
+
+    client.set_requested_static_capabilities(["brand_name", "model_name"])
+    client.set_requested_virtual_capabilities(["is_smartphone", "form_factor"])
+    print()
+    print("Detecting device for user-agent: " + ua)
+
+    # Perform a device detection calling WM server API
+    device = client.lookup_request(req)
+```
