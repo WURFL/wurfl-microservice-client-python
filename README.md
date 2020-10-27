@@ -7,6 +7,8 @@ Version 2.2.0 makes WURFL microservice client backward compatible with Python 2.
 - pywurfl (replaced by urrllib3)
 - @lru_cache (replaced by pylru)
 
+While in orlder versions cache was used by default, in this version you'll have to use the `setCacheSize` function of the client to ensure it is created and used.
+
 ## Python WURFL Microservice Client
 
 WURFL Microservice (by ScientiaMobile, Inc.) is a mobile device detection service that can quickly and accurately detect over 500 capabilities of visiting devices. It can differentiate between portable mobile devices, desktop devices, SmartTVs and any other types of devices that have a web browser.
