@@ -1,3 +1,11 @@
+2.2.0
+-------------------------------------
+- This version introduces backward compatibility for Python 2.7 version by:
+   - replaces @lru_cache native python 3.x-only decorator with pylru external lib
+   - replaces pycurl (which has abandones python 2.7 support since September 2020) with urllib3
+- Adds set_cache_size and get_actual_cache_size (the latter replaces the cache info call from @lru_cache)
+
+
 2.1.0
 -------------------------------------
 - Added lookup_headers(dict) method to WM client. Added tests.

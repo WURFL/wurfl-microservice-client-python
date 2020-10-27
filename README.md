@@ -18,7 +18,7 @@ This is the Python Client API for accessing the WURFL Microservice. The API is r
 
 Python implementation of the WM Client api.
 Requires:
-- Python 3.x
+- Python 2.7 or 3.x
 - pip
 - pycurl module (you can install it with `pip install pycurl`)
 - requests module (you can install it with `pip install requests`)
@@ -27,7 +27,7 @@ The Example project contains an example of client api usage for a script :
 
 
 ```python
-from wmclient import WmClient
+from wmclient import WmClient, WmClientError
 
 try:
     client = WmClient.create("http", "localhost", 8080, "")
@@ -44,7 +44,7 @@ try:
     client.set_requested_static_capabilities(["brand_name", "model_name"])
     client.set_requested_virtual_capabilities(["is_smartphone", "form_factor"])
     print()
-    print("Detecting device for user-agent: " + ua);
+    print("Detecting device for user-agent: " + ua)
 
     # Perform a device detection calling WM server API
     device = client.lookup_useragent(ua)
@@ -60,7 +60,7 @@ try:
         if capabilities["is_smartphone"] == "true":
             print("This is a smartphone")
             # Iterate over all the device capabilities and print them
-            print("All received capabilities");
+            print("All received capabilities")
             for k in capabilities:
                 print(k + ": " + capabilities[k])
 
