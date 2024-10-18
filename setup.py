@@ -6,7 +6,7 @@ with open('README') as f:
 setuptools.setup(
     name='wmclient',
     packages=['wmclient'],
-    version='2.2.0',
+    version='2.3.0',
     license='apache-2.0',
     description='WURFL Microservice client for Python',
     long_description=long_description,
@@ -28,5 +28,6 @@ setuptools.setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
 )
