@@ -35,6 +35,7 @@ The Example project contains an example of client api usage for a script
 :
 
 .. code:: python
+
 from wmclient import *
 from requests import Request as HttpRequest
 
