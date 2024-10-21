@@ -7,7 +7,7 @@ Version 2.2.0 makes WURFL microservice client backward compatible with Python 2.
 - pywurfl (replaced by urrllib3)
 - @lru_cache (replaced by pylru)
 
-While in orlder versions cache was used by default, in this version you'll have to use the `set_cache_size` function of the client to ensure it is created and used.
+While in older versions cache was used by default, in this version you'll have to use the `set_cache_size` function of the client to ensure it is created and used.
 
 ## Python WURFL Microservice Client
 
