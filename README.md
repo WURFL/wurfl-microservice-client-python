@@ -19,8 +19,6 @@ This is the Python Client API for accessing the WURFL Microservice. The API is r
 
 - WURFL Microservice for AWS: https://www.scientiamobile.com/products/wurfl-device-detection-microservice-aws/
 
-- WURFL Microservice for Azure: https://www.scientiamobile.com/products/wurfl-device-detection-microservice-azure/
-
 - WURFL Microservice for Azure: https://www.scientiamobile.com/products/wurfl-microservice-for-azure/
 
 - WURFL Microservice for Google Cloud Platform: https://www.scientiamobile.com/products/wurfl-microservice-for-gcp/
@@ -31,6 +29,7 @@ Requires:
 - pip
 - pycurl module (you can install it with `pip install pycurl`)
 - requests module (you can install it with `pip install requests`)
+- pylru module (you can install it with `pip install pylru`)
 
 The Example project contains an example of client api usage for a script :
 
