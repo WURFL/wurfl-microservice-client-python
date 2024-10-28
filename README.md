@@ -25,7 +25,7 @@ This is the Python Client API for accessing the WURFL Microservice. The API is r
 
 Python implementation of the WM Client api.
 Requires:
-- Python 2.7 or 3.x
+- Python 3.x
 - pip
 - pycurl module (you can install it with `pip install pycurl`)
 - requests module (you can install it with `pip install requests`)

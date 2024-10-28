@@ -5,7 +5,7 @@ import pylru
 import logging
 import urllib3
 
-__version__ = "2.3.0"
+__version__ = "2.3.1"
 __client_version__ = "wurfl-microservice-python_%s" % __version__
 __default_http_timeout__ = 10
 config_path = ""

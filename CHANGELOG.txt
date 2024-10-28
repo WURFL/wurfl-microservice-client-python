@@ -1,3 +1,7 @@
+2.3.1 - Oct 28th, 2024
+-------------------------------------
+- Fixed README
+
 2.3.0
 -------------------------------------
 - Deprecated set_requested_capabilites() method
