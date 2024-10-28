@@ -1,3 +1,11 @@
+2.3.1 - Oct 28th, 2024
+-------------------------------------
+- Fixed README
+
+2.3.0
+-------------------------------------
+- Deprecated set_requested_capabilites() method
+
 2.2.0
 -------------------------------------
 - This version introduces backward compatibility for Python 2.7 version by:

@@ -5,7 +5,7 @@ import pylru
 import logging
 import urllib3
 
-__version__ = "2.2.0"
+__version__ = "2.3.1"
 __client_version__ = "wurfl-microservice-python_%s" % __version__
 __default_http_timeout__ = 10
 config_path = ""
@@ -166,6 +166,12 @@ class WmClient:
         self.clear_caches()
 
     def set_requested_capabilities(self, capsList):
+        """
+        DEPRECATED: This method is deprecated and will be removed in a future version.
+        Use set_requested_static_capabilities() and set_requested_virtual_capabilities() instead.
+        """
+        import warnings
+        warnings.warn("set_requested_capabilities() is deprecated. Use set_requested_static_capabilities() and set_requested_virtual_capabilities() instead.", DeprecationWarning, stacklevel=2)
         """sets the list of virtual and static capabilities handled by this client"""
         if capsList is None:
             self.requested_static_caps = None
