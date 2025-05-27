@@ -1,8 +1,8 @@
 # wmclient - WURFL Microservice Client for Python
 
-## Differences between version 2.2.0 and previous ones.
+## Differences between version 2.2.0 and previous versions
 
-Version 2.2.0 makes WURFL microservice client backward compatible with Python 2.7. To do that it replaces two libraries that are available for Python 3.x only:
+Version 2.2.0 makes WURFL Microservice client backward compatible with Python 2.7. To do that it replaces two libraries that are available for Python 3.x only:
 
 - pywurfl (replaced by urrllib3)
 - @lru_cache (replaced by pylru)
@@ -15,13 +15,13 @@ WURFL Microservice (by ScientiaMobile, Inc.) is a mobile device detection servic
 
 This is the Python Client API for accessing the WURFL Microservice. The API is released under Open-Source and can be integrated with other open-source or proprietary code. In order to operate, it requires access to a running instance of the WURFL Microservice product, such as:
 
-- WURFL Microservice for Docker: https://www.scientiamobile.com/products/wurfl-microservice-docker-detect-device/
+- [WURFL Microservice for Docker](https://www.scientiamobile.com/products/wurfl-microservice-docker-detect-device/)
 
-- WURFL Microservice for AWS: https://www.scientiamobile.com/products/wurfl-device-detection-microservice-aws/
+- [WURFL Microservice for AWS](https://www.scientiamobile.com/products/wurfl-device-detection-microservice-aws/)
 
-- WURFL Microservice for Azure: https://www.scientiamobile.com/products/wurfl-microservice-for-azure/
+- [WURFL Microservice for Azure](https://azuremarketplace.microsoft.com/en-us/marketplace/apps?search=WURFL%20Microservice&page=1)
 
-- WURFL Microservice for Google Cloud Platform: https://www.scientiamobile.com/products/wurfl-microservice-for-gcp/
+- [WURFL Microservice for Google Cloud Platform](https://console.cloud.google.com/marketplace/browse?filter=partner:ScientiaMobile%20Inc.&q=WURFL%20Microservice)
 
 Python implementation of the WM Client api.
 Requires:
