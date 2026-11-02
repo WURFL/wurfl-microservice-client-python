@@ -5,7 +5,7 @@ import pylru
 import logging
 import urllib3
 
-__version__ = "2.3.1"
+__version__ = "2.3.2"
 __client_version__ = "wurfl-microservice-python_%s" % __version__
 __default_http_timeout__ = 10
 config_path = ""
@@ -549,7 +549,7 @@ class JsonInfoData:
 class JsonDeviceData:
 
     def __init__(self, info_dict):
-        self.error = info_dict["error"]
+        self.error = info_dict.get("error", "")
         self.api_version = info_dict["apiVersion"]
         self.capabilities = info_dict["capabilities"]
         self.mtime = int(info_dict["mtime"])

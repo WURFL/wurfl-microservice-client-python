@@ -1,3 +1,7 @@
+2.3.2 - Nov 2026
+-------------------------------------
+- Fixed an issue where device lookups could fail when the server response did not include an error field.
+
 2.3.1 - Oct 28th, 2024
 -------------------------------------
 - Fixed README
